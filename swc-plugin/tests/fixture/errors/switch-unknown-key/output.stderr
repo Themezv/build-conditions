@@ -1,0 +1,6 @@
+  x build-conditions: значение условия 'desktpo' не найдено ни в одной группе конфига (группы: platform, runtime)
+   ,-[input.js:4:1]
+ 3 | import { b } from './b';
+ 4 | export const x = switchBuildCondition({ desktpo: a, mobile: b });
+   :                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   `----

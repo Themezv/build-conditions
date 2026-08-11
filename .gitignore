@@ -1,0 +1,6 @@
+node_modules/
+dist/
+swc-plugin/target/
+storybook-static/
+*.log
+.DS_Store

@@ -1,0 +1,55 @@
+{
+    "name": "build-conditions",
+    "version": "0.1.0",
+    "description": "Разделение кода по произвольным условиям на этапе сборки",
+    "license": "MIT",
+    "author": "Artem Zverev <themezv@gmail.com>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Themezv/build-conditions.git"
+    },
+    "sideEffects": false,
+    "exports": {
+        ".": "./src/index.ts",
+        "./testing": "./src/testing.ts",
+        "./storybook-addon": "./src/addon/index.ts",
+        "./swc-plugin": "./dist/swc_plugin_build_conditions.wasm",
+        "./package.json": "./package.json"
+    },
+    "scripts": {
+        "preinstall": "npx only-allow pnpm",
+        "build": "run-s 'build:*'",
+        "build:cleanup": "rm -rf dist && mkdir dist",
+        "build:swc-plugin": "cd ./swc-plugin && cargo build --target wasm32-wasip1 --release && cp ./target/wasm32-wasip1/release/swc_plugin_build_conditions.wasm ../dist/swc_plugin_build_conditions.wasm",
+        "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,css,json,yaml,yml}'",
+        "storybook": "storybook dev -p 9010 -c ./.config/storybook",
+        "storybook:build": "storybook build -c ./.config/storybook --quiet",
+        "typecheck": "tsc -b",
+        "unit": "jest",
+        "unit:swc-plugin": "cd ./swc-plugin && cargo test"
+    },
+    "devDependencies": {
+        "@rsbuild/core": "1.6.11",
+        "@storybook/react": "10.5.2",
+        "@swc/core": "1.14.0",
+        "@swc/jest": "0.2.29",
+        "@testing-library/jest-dom": "5.16.5",
+        "@testing-library/react": "13.3.0",
+        "@types/jest": "30.0.0",
+        "@types/node": "24.10.0",
+        "@types/react": "18.0.15",
+        "@types/testing-library__jest-dom": "5.14.5",
+        "jest": "30.2.0",
+        "jest-environment-jsdom": "29.7.0",
+        "npm-run-all": "4.1.5",
+        "prettier": "3.6.2",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "storybook": "10.5.2",
+        "storybook-react-rsbuild": "3.3.4",
+        "typescript": "6.0.2"
+    },
+    "peerDependencies": {
+        "react": "18.2.0"
+    }
+}

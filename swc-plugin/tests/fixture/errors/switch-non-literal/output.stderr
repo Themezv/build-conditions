@@ -1,0 +1,6 @@
+  x build-conditions: switchBuildCondition принимает только объектный литерал с ветками условий
+   ,-[input.js:3:1]
+ 2 | import { branches } from './branches';
+ 3 | export const x = switchBuildCondition(branches);
+   :                                       ^^^^^^^^
+   `----

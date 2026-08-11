@@ -1,0 +1,6 @@
+  x build-conditions: ни одна ветка switchBuildCondition не совпала с зафиксированными условиями и нет ветки default
+   ,-[input.js:3:1]
+ 2 | import { b } from './b';
+ 3 | export const x = switchBuildCondition({ mobile: b });
+   :                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   `----
