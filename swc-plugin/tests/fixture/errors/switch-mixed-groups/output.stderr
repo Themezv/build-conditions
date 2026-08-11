@@ -1,4 +1,4 @@
-  x build-conditions: ветки switchBuildCondition из разных групп условий ('platform' и 'runtime')
+  x build-conditions: switchBuildCondition branches belong to different condition groups ('platform' and 'runtime')
    ,-[input.js:4:1]
  3 | import { b } from './b';
  4 | export const x = switchBuildCondition({ desktop: a, server: b });

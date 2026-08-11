@@ -1,4 +1,4 @@
-  x build-conditions: isBuildConditions принимает только строковый литерал или массив строковых литералов; для динамических проверок используйте getBuildConditions
+  x build-conditions: isBuildConditions accepts only a string literal or an array of string literals; use getBuildConditions for dynamic checks
    ,-[input.js:3:1]
  2 | export function check(condition) {
  3 |     return isBuildConditions(condition);

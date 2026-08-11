@@ -42,11 +42,11 @@ const NestedExample = switchBuildCondition({
 });
 
 /**
- * ⚠️ Антипаттерн для демонстрации: top-level вызов isBuildConditions.
- * Значение вычисляется один раз при импорте модуля: при первой загрузке стори
- * условия ещё не установлены (декоратор срабатывает позже) — вызов бросает ошибку,
- * а после — замораживает значение и не реагирует на переключение тулбара.
- * try/catch здесь только чтобы упавший модуль не сломал весь демо-стенд.
+ * ⚠️ Anti-pattern shown on purpose: a top-level isBuildConditions call.
+ * The value is computed once at module import: on the first story load the
+ * conditions are not set yet (the decorator runs later) — the call throws,
+ * and afterwards it freezes the value and ignores toolbar switches.
+ * The try/catch is only here so the failing module does not break the demo.
  */
 let frozenIsDesktop: string;
 

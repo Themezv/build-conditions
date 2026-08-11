@@ -5,8 +5,8 @@ declare global {
 }
 
 /**
- * Дефолтное хранилище — глобальная переменная. Подходит для браузера, тестов
- * и Storybook: в одном контексте одновременно существует один набор условий.
+ * Default storage — a global variable. Suitable for the browser, tests and
+ * Storybook: a single set of conditions exists in one context at a time.
  */
 const defaultStorage: BuildConditionsStorage = {
     get: () => globalThis.__BUILD_CONDITIONS__,
@@ -17,27 +17,27 @@ const defaultStorage: BuildConditionsStorage = {
 
 let storage: BuildConditionsStorage = defaultStorage;
 
-/** Подменяет хранилище условий. Вызывается один раз при инициализации окружения */
+/** Replaces the conditions storage. Called once during environment initialization */
 export function setBuildConditionsStorage(customStorage: BuildConditionsStorage): void {
     storage = customStorage;
 }
 
 /**
- * Тестовый хелпер: возвращает дефолтное хранилище и очищает установленные
- * условия, чтобы тесты не зависели от порядка выполнения. Экспортируется
- * только из entrypoint'а `testing`.
+ * Test helper: restores the default storage and clears any conditions that
+ * were set, so tests do not depend on execution order. Exported only from
+ * the `testing` entrypoint.
  */
 export function resetBuildConditionsStorage(): void {
     storage = defaultStorage;
     delete globalThis.__BUILD_CONDITIONS__;
 }
 
-/** Устанавливает условия в текущее хранилище (дефолтное — глобальная переменная) */
+/** Sets conditions in the current storage (the default one is a global variable) */
 export function setBuildConditions(conditions: PartialBuildConditions): void {
     if (!storage.set) {
         throw new Error(
-            'build-conditions: текущее хранилище не поддерживает setBuildConditions. ' +
-                'Устанавливайте условия средствами самого хранилища (например, через AsyncLocalStorage.run на сервере)'
+            'build-conditions: the current storage does not support setBuildConditions. ' +
+                'Set conditions through the storage itself (e.g. via AsyncLocalStorage.run on the server)'
         );
     }
 
@@ -45,20 +45,21 @@ export function setBuildConditions(conditions: PartialBuildConditions): void {
 }
 
 /**
- * Возвращает текущие активные условия.
+ * Returns the currently active conditions.
  *
- * Если условия не установлены — бросает ошибку: это защита от вызова
- * runtime-хелперов до инициализации условий (нет setup-файла в тестах,
- * декоратора в Storybook или регистрации хранилища на сервере).
+ * Throws when conditions are not set — this guards against calling runtime
+ * helpers before conditions are initialized (missing setup file in tests,
+ * missing decorator in Storybook, or missing storage registration on the
+ * server).
  */
 export function getBuildConditions(): PartialBuildConditions {
     const conditions = storage.get();
 
     if (!conditions || Object.keys(conditions).length === 0) {
         throw new Error(
-            'build-conditions: условия сборки не установлены. ' +
-                'Вызовите setBuildConditions (браузер, тесты, Storybook) ' +
-                'или зарегистрируйте хранилище через setBuildConditionsStorage (сервер)'
+            'build-conditions: build conditions are not set. ' +
+                'Call setBuildConditions (browser, tests, Storybook) ' +
+                'or register a storage via setBuildConditionsStorage (server)'
         );
     }
 

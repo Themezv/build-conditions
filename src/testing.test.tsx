@@ -8,7 +8,7 @@ beforeEach(() => {
 });
 
 describe('withBuildConditions', () => {
-    it('устанавливает условия перед рендером story', () => {
+    it('sets the conditions before rendering the story', () => {
         const Component = switchBuildCondition({
             desktop: () => <div data-testid="story">desktop</div>,
             mobile: () => <div data-testid="story">mobile</div>,

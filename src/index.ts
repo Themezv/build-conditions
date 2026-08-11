@@ -1,7 +1,7 @@
 /**
- * Расширяемый интерфейс для определения групп условий.
+ * Extensible interface defining the condition groups.
  *
- * Пользователи расширяют его через declaration merging:
+ * Consumers extend it via declaration merging:
  *
  * ```typescript
  * declare module 'build-conditions' {
@@ -12,16 +12,16 @@
  * }
  * ```
  *
- * Значения условий должны быть уникальны между всеми группами:
- * разрешение значения в группу (в типах, в runtime и в SWC-плагине)
- * идёт по самому значению, а не по паре «группа → значение».
+ * Condition values must be unique across all groups: a value is resolved
+ * to its group (in types, at runtime, and in the SWC plugin) by the value
+ * itself, not by a "group → value" pair.
  *
- * Интерфейс объявлен прямо в entrypoint'е намеренно: module augmentation
- * в TypeScript мержится только с интерфейсом, объявленным в самом
- * аугментируемом модуле, и не работает через реэкспорт. Остальные типы
- * пакета живут в ./types.
+ * The interface is declared right in the entrypoint on purpose: TypeScript
+ * module augmentation only merges with an interface declared in the module
+ * being augmented and does not work through a re-export. The rest of the
+ * package types live in ./types.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface -- интерфейс наполняется через declaration merging
+// eslint-disable-next-line @typescript-eslint/no-empty-interface -- populated via declaration merging
 export interface BuildConditionGroups {}
 
 export type {

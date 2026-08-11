@@ -1,16 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- универсальные обёртки над функциями и объектами */
-/* eslint-disable @typescript-eslint/consistent-type-assertions -- Proxy-ловушки делегируют значению разрешённой ветки */
+/* eslint-disable @typescript-eslint/no-explicit-any -- generic wrappers over functions and objects */
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Proxy traps delegate to the resolved branch value */
 
 import type { AllowedValue, Homogeneous, SingleGroup, UniqueConditionValuesGuard } from './types';
 import { getBuildConditions } from './storage';
 
 /**
- * Выбирает значение в зависимости от активного условия. Значения — функции или объекты.
+ * Picks a value depending on the active condition. Values are functions or objects.
  *
- * Без SWC-плагина работает в runtime: возвращает обёртку, которая при каждом
- * обращении определяет активное условие через `getBuildConditions()` и делегирует
- * нужной ветке. SWC-плагин при сборке с зафиксированными условиями инлайнит
- * результат совпавшей ветки и удаляет мёртвый код.
+ * Without the SWC plugin it works at runtime: returns a wrapper that resolves
+ * the active condition via `getBuildConditions()` on every access and
+ * delegates to the matching branch. When building with fixed conditions, the
+ * SWC plugin inlines the winning branch and removes the dead code.
  *
  * ```typescript
  * const Component = switchBuildCondition({
@@ -19,7 +19,7 @@ import { getBuildConditions } from './storage';
  * });
  * ```
  *
- * Ветка `default` используется, если ни один ключ не совпал с активными условиями.
+ * The `default` branch is used when no key matches the active conditions.
  */
 export function switchBuildCondition<M extends Record<string, AllowedValue>>(
     conditions: SingleGroup<M> & Homogeneous<M> & UniqueConditionValuesGuard
@@ -43,7 +43,7 @@ export function switchBuildCondition(conditions: Record<string, AllowedValue>): 
             return conditions.default;
         }
 
-        throw new Error(`switchBuildCondition: нет значения для текущих условий ${JSON.stringify(active)}`);
+        throw new Error(`switchBuildCondition: no value for the current conditions ${JSON.stringify(active)}`);
     };
 
     const allFunctions = Object.values(conditions).every(value => typeof value === 'function');

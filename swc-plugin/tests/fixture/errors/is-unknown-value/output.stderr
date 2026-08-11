@@ -1,4 +1,4 @@
-  x build-conditions: значение условия 'desktpo' не найдено ни в одной группе конфига (группы: platform, runtime)
+  x build-conditions: condition value 'desktpo' is not found in any group of the config (groups: platform, runtime)
    ,-[input.js:2:1]
  1 | import { isBuildConditions } from 'build-conditions';
  2 | export const flag = isBuildConditions('desktpo');

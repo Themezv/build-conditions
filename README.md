@@ -1,14 +1,23 @@
 # build-conditions
 
-Разделение кода по произвольным условиям на этапе сборки: вместо жёстко
-зашитых платформ — расширяемые группы условий (`platform`, `runtime`,
-A/B-эксперименты сборок и т.д.).
+Build-time code splitting by arbitrary conditions. You declare extensible
+**condition groups** (`platform`, `runtime`, build A/B experiments, and so on),
+branch your code with two tiny helpers, and get per-condition bundles: an SWC
+plugin inlines the matching branch and removes the dead ones together with
+their imports. Without the plugin the same code keeps working at runtime, so
+tests, Storybook and dev setups need no special build.
 
-## Группы условий
+- **Type-safe** — condition values are checked by TypeScript; mixing groups or
+  misspelling a value is a compile-time error.
+- **Runtime fallback** — every helper has a runtime implementation; the SWC
+  plugin is an optimization, not a requirement.
+- **Whole-branch elimination** — dead branches disappear from the bundle along
+  with the imports only they used.
 
-Группы объявляются через declaration merging. Значения условий должны быть
-уникальны между всеми группами — разрешение значения в группу идёт по самому
-значению:
+## Declaring condition groups
+
+Groups are declared via declaration merging. Condition values must be unique
+across all groups — a value is resolved to its group by the value itself:
 
 ```typescript
 declare module 'build-conditions' {
@@ -19,40 +28,53 @@ declare module 'build-conditions' {
 }
 ```
 
-## Хелперы
+## Usage
+
+### `switchBuildCondition` — pick a value per condition
+
+Branches are functions or objects (e.g. React components or CSS Modules).
+The optional `default` branch is used when no key matches:
 
 ```typescript
-import { switchBuildCondition, isBuildConditions } from 'build-conditions';
+import { switchBuildCondition } from 'build-conditions';
 import DesktopComponent from './Component@desktop';
 import MobileComponent from './Component@mobile';
 
-// Выбор значения (функции или объекты; default — ветка по умолчанию)
 export const Component = switchBuildCondition({
     desktop: DesktopComponent,
     mobile: MobileComponent,
 });
+```
 
-// Проверка условий (массив — все должны быть активны)
+### `isBuildConditions` — check active conditions
+
+A single condition or an array (all must be active at once). The group name is
+never spelled out — it is derived from the value:
+
+```typescript
+import { isBuildConditions } from 'build-conditions';
+
 if (isBuildConditions(['desktop', 'client'])) {
-    // код только для десктопного клиентского бандла
+    // code for the desktop client bundle only
 }
 ```
 
-Хелперы работают в runtime без сборки: `switchBuildCondition` возвращает
-обёртку (HOC для функций, Proxy для объектов), выбирающую ветку при каждом
-обращении. SWC-плагин — оптимизация: при сборке с зафиксированными условиями
-инлайнит совпавшую ветку и удаляет мёртвые ветки вместе с их импортами.
+Without the SWC plugin both helpers work at runtime: `switchBuildCondition`
+returns a wrapper (an HOC for functions, a Proxy for objects) that resolves
+the branch on every access, and `isBuildConditions` reads the current
+conditions from the storage.
 
-## Хранилище условий
+## Conditions storage (runtime mode)
 
-Текущие условия для runtime-режима читаются из подменяемого хранилища
-(`getBuildConditions` бросает ошибку, если условия не установлены):
+The current conditions are read from a replaceable storage
+(`getBuildConditions` throws when conditions are not set):
 
-- **Браузер, тесты, Storybook** — дефолтное хранилище на
-  `globalThis.__BUILD_CONDITIONS__`, условия устанавливаются через
+- **Browser, tests, Storybook** — the default storage backed by
+  `globalThis.__BUILD_CONDITIONS__`; set conditions via
   `setBuildConditions({ platform: 'desktop' })`.
-- **Сервер (SSR)** — пакет не тянет `node:async_hooks`: сервис сам регистрирует
-  хранилище поверх своего `AsyncLocalStorage` и задаёт условия per-request:
+- **Server (SSR)** — the package does not pull in `node:async_hooks`: the
+  service registers a storage backed by its own `AsyncLocalStorage` and sets
+  conditions per request:
 
 ```typescript
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -60,23 +82,24 @@ import { setBuildConditionsStorage, type PartialBuildConditions } from 'build-co
 
 const als = new AsyncLocalStorage<PartialBuildConditions>();
 
-// один раз при старте сервера; set не задан — setBuildConditions на сервере
-// бросит ошибку, условия задаются только через als.run
+// once at server startup; `set` is omitted — setBuildConditions on the
+// server throws, conditions are set only through als.run
 setBuildConditionsStorage({ get: () => als.getStore() });
 
-// в обработчике запроса
+// in the request handler
 als.run({ platform: detectPlatform(req), runtime: 'server' }, () => {
     const html = renderToString(<App />);
     res.send(html);
 });
 ```
 
-## SWC-плагин
+## SWC plugin
 
-Entrypoint `build-conditions/swc-plugin` — WASM-плагин
-(`swc-plugin/`, Rust, версия `swc_core` должна быть совместима с plugin
-runner'ом swc целевого бандлера). Конфигурация — полный состав групп плюс выбранное значение
-каждой группы либо `null` (группа переключается в runtime и не трансформируется):
+The `build-conditions/swc-plugin` entrypoint is a WASM plugin (`swc-plugin/`,
+Rust; the `swc_core` version must be compatible with the swc plugin runner of
+the target bundler). The configuration lists the complete composition of the
+groups plus the chosen value of each group — or `null` when the group is
+switched at runtime and must not be transformed:
 
 ```json
 {
@@ -91,23 +114,102 @@ runner'ом swc целевого бандлера). Конфигурация —
 }
 ```
 
-Плагин разрешает значение условия в группу по `groups`, поэтому:
+Wiring it up (e.g. in an swc/rspack config, one build per set of conditions):
 
-- аргументы хелперов обязаны быть литералами (строка или массив строк,
-  карта веток — объектный литерал); динамическая передача — ошибка сборки,
-  для runtime-логики используйте `getBuildConditions`;
-- значение, не найденное ни в одной группе, — ошибка сборки (ловит опечатки);
-- мёртвые ветки `if (isBuildConditions(...))` (включая `!`-отрицание и
-  else-if цепочки) вырезаются вместе со ставшими ненужными импортами;
-  исключение — ветки с `var`-декларациями (hoisting), они остаются
-  как `if (false)` и удаляются минификатором.
+```javascript
+{
+    jsc: {
+        experimental: {
+            plugins: [
+                [
+                    require.resolve('build-conditions/swc-plugin'),
+                    {
+                        groups: { platform: ['desktop', 'mobile'], runtime: ['server', 'client'] },
+                        conditions: { platform: 'desktop', runtime: 'client' },
+                    },
+                ],
+            ],
+        },
+    },
+}
+```
 
-Пересборка wasm: `pnpm run build:swc-plugin` (нужен Rust с таргетом
-`wasm32-wasip1`), тесты: `pnpm run unit:swc-plugin`.
+### Transformation examples
+
+With `conditions: { platform: "desktop", runtime: "client" }`,
+`switchBuildCondition` is replaced by the winning branch, and the dead branch
+and its import are removed:
+
+```typescript
+// source
+import { switchBuildCondition } from 'build-conditions';
+import DesktopComponent from './Component@desktop';
+import MobileComponent from './Component@mobile';
+
+export const Component = switchBuildCondition({
+    desktop: DesktopComponent,
+    mobile: MobileComponent,
+});
+
+// output
+import DesktopComponent from './Component@desktop';
+
+export const Component = DesktopComponent;
+```
+
+`isBuildConditions` folds into a boolean, and statically dead `if` branches
+(including `!` negation and else-if chains) are cut out:
+
+```typescript
+// source
+import { isBuildConditions } from 'build-conditions';
+
+if (isBuildConditions(['desktop', 'client'])) {
+    initDesktopClient();
+} else {
+    initFallback();
+}
+
+// output
+initDesktopClient();
+```
+
+A group set to `null` stays in runtime — only the fixed groups are folded.
+With `conditions: { platform: null, runtime: "client" }`:
+
+```typescript
+// source
+import { isBuildConditions } from 'build-conditions';
+
+const isDesktop = isBuildConditions('desktop');
+const isServer = isBuildConditions('server');
+
+// output
+import { isBuildConditions } from 'build-conditions';
+
+const isDesktop = isBuildConditions('desktop'); // platform is runtime-switched
+const isServer = false; // runtime is fixed to 'client'
+```
+
+### Rules enforced by the plugin
+
+The plugin resolves a condition value to its group via `groups`, so:
+
+- helper arguments must be literals (a string or an array of strings; the
+  branch map — an object literal); passing anything dynamic is a build error —
+  use `getBuildConditions` for runtime logic;
+- a value not found in any group is a build error (catches typos);
+- dead `if (isBuildConditions(...))` branches are removed together with
+  imports that became unused; the exception is branches with `var`
+  declarations (hoisting) — they are left as `if (false)` for the minifier
+  to finish off.
+
+Rebuilding the wasm: `pnpm run build:swc-plugin` (requires Rust with the
+`wasm32-wasip1` target). Tests: `pnpm run unit:swc-plugin`.
 
 ## Storybook
 
-Декоратор для story:
+A per-story decorator:
 
 ```typescript
 import { withBuildConditions } from 'build-conditions/testing';
@@ -117,10 +219,11 @@ export default {
 };
 ```
 
-Переключение условий в toolbar — аддон `build-conditions/storybook-addon`:
+Switching conditions from the toolbar — the
+`build-conditions/storybook-addon` entrypoint:
 
 ```typescript
-// .config/storybook/preview.ts
+// .storybook/preview.ts
 import {
     createBuildConditionsGlobalTypes,
     createBuildConditionsDecorator,
@@ -133,3 +236,18 @@ const conditionsConfig = {
 export const globalTypes = createBuildConditionsGlobalTypes(conditionsConfig);
 export const decorators = [createBuildConditionsDecorator(conditionsConfig)];
 ```
+
+## Development
+
+```bash
+pnpm install
+pnpm run unit             # jest tests of the runtime helpers and the addon
+pnpm run typecheck        # tsc
+pnpm run unit:swc-plugin  # cargo tests of the SWC plugin (unit + fixtures)
+pnpm run storybook        # interactive demo of the runtime mode
+pnpm run build            # build the wasm plugin into dist/
+```
+
+## License
+
+MIT

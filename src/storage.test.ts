@@ -4,24 +4,24 @@ import type { PartialBuildConditions } from './index';
 import { getBuildConditions, isBuildConditions, setBuildConditions, setBuildConditionsStorage } from './index';
 import { resetBuildConditionsStorage } from './testing';
 
-// Возврат к дефолтному хранилищу, чтобы тесты не зависели от порядка выполнения
+// Restore the default storage so tests do not depend on execution order
 beforeEach(() => {
     resetBuildConditionsStorage();
 });
 
-describe('дефолтное хранилище (globalThis)', () => {
-    it('getBuildConditions бросает ошибку, если условия не установлены', () => {
-        expect(() => getBuildConditions()).toThrow('условия сборки не установлены');
+describe('default storage (globalThis)', () => {
+    it('getBuildConditions throws when conditions are not set', () => {
+        expect(() => getBuildConditions()).toThrow('build conditions are not set');
     });
 
-    it('setBuildConditions пишет в globalThis.__BUILD_CONDITIONS__', () => {
+    it('setBuildConditions writes to globalThis.__BUILD_CONDITIONS__', () => {
         setBuildConditions({ platform: 'desktop' });
 
         expect(globalThis.__BUILD_CONDITIONS__).toEqual({ platform: 'desktop' });
         expect(getBuildConditions()).toEqual({ platform: 'desktop' });
     });
 
-    it('повторный setBuildConditions мерджит условия', () => {
+    it('a repeated setBuildConditions merges the conditions', () => {
         setBuildConditions({ platform: 'desktop', runtime: 'client' });
         setBuildConditions({ platform: 'mobile' });
 
@@ -30,22 +30,22 @@ describe('дефолтное хранилище (globalThis)', () => {
 });
 
 describe('setBuildConditionsStorage', () => {
-    it('подменяет источник условий для всех хелперов', () => {
+    it('replaces the conditions source for all helpers', () => {
         setBuildConditionsStorage({ get: () => ({ platform: 'mobile' }) });
 
         expect(getBuildConditions()).toEqual({ platform: 'mobile' });
         expect(isBuildConditions('mobile')).toBe(true);
     });
 
-    it('setBuildConditions бросает ошибку, если хранилище не поддерживает запись', () => {
+    it('setBuildConditions throws when the storage does not support writes', () => {
         setBuildConditionsStorage({ get: () => ({ platform: 'desktop' }) });
 
         expect(() => setBuildConditions({ platform: 'mobile' })).toThrow(
-            'хранилище не поддерживает setBuildConditions'
+            'storage does not support setBuildConditions'
         );
     });
 
-    it('хранилище на AsyncLocalStorage изолирует условия конкурентных вызовов', async () => {
+    it('an AsyncLocalStorage-backed storage isolates conditions of concurrent calls', async () => {
         const als = new AsyncLocalStorage<PartialBuildConditions>();
         setBuildConditionsStorage({ get: () => als.getStore() });
 
@@ -72,24 +72,24 @@ describe('setBuildConditionsStorage', () => {
         expect(mobile.second).toEqual({ platform: 'mobile', runtime: 'server' });
     });
 
-    it('вне AsyncLocalStorage.run условия считаются неустановленными', () => {
+    it('outside AsyncLocalStorage.run the conditions count as not set', () => {
         const als = new AsyncLocalStorage<PartialBuildConditions>();
         setBuildConditionsStorage({ get: () => als.getStore() });
 
-        expect(() => getBuildConditions()).toThrow('условия сборки не установлены');
+        expect(() => getBuildConditions()).toThrow('build conditions are not set');
     });
 });
 
 describe('resetBuildConditionsStorage', () => {
-    it('возвращает дефолтное хранилище и очищает условия', () => {
+    it('restores the default storage and clears the conditions', () => {
         setBuildConditions({ platform: 'desktop' });
         setBuildConditionsStorage({ get: () => ({ platform: 'mobile' }) });
 
         resetBuildConditionsStorage();
 
-        expect(() => getBuildConditions()).toThrow('условия сборки не установлены');
+        expect(() => getBuildConditions()).toThrow('build conditions are not set');
 
-        // Дефолтное хранилище снова активно — прямая запись работает
+        // The default storage is active again — direct writes work
         setBuildConditions({ runtime: 'client' });
         expect(getBuildConditions()).toEqual({ runtime: 'client' });
     });

@@ -1,7 +1,7 @@
-//! SWC-плагин пакета `build-conditions`.
+//! SWC plugin of the `build-conditions` package.
 //!
-//! Заменяет вызовы `switchBuildCondition` / `isBuildConditions` на compile-time
-//! значения по конфигурации:
+//! Replaces `switchBuildCondition` / `isBuildConditions` calls with
+//! compile-time values according to the configuration:
 //!
 //! ```json
 //! {
@@ -10,17 +10,17 @@
 //! }
 //! ```
 //!
-//! - группа со строковым значением в `conditions` зафиксирована: совпавшая
-//!   ветка инлайнится, `isBuildConditions` сворачивается в `true` / `false`,
-//!   мёртвые ветки `if (isBuildConditions(...))` вырезаются вместе со ставшими
-//!   ненужными импортами;
-//! - группа со значением `null` не зафиксирована: её вызовы остаются в runtime.
+//! - a group with a string value in `conditions` is fixed: the matching
+//!   branch is inlined, `isBuildConditions` is folded into `true` / `false`,
+//!   dead `if (isBuildConditions(...))` branches are removed together with
+//!   imports that become unused;
+//! - a group with a `null` value is not fixed: its calls stay in runtime.
 //!
-//! `groups` содержит полный состав значений каждой группы — по нему значение
-//! однозначно разрешается в группу (значения уникальны между группами).
-//! Аргументы хелперов обязаны быть литералами; значение, не найденное ни
-//! в одной группе, — ошибка сборки. Для динамических проверок предназначен
-//! `getBuildConditions`, который плагин сознательно не трогает.
+//! `groups` contains the complete set of values of every group — it lets a
+//! value be unambiguously resolved to its group (values are unique across
+//! groups). Helper arguments must be literals; a value not found in any
+//! group is a build error. Dynamic checks belong to `getBuildConditions`,
+//! which the plugin deliberately leaves untouched.
 
 mod transform;
 
@@ -32,36 +32,36 @@ use swc_core::plugin::{plugin_transform, proxies::TransformPluginProgramMetadata
 
 pub use transform::TransformVisitor;
 
-/// Конфигурация плагина, см. `PluginOptions` в `build-conditions`
+/// Plugin configuration, see `PluginOptions` in `build-conditions`
 #[derive(Deserialize, Debug, Default, Clone)]
 pub struct Config {
-    /// Полный состав групп условий: группа → все её значения
+    /// Complete composition of condition groups: group → all of its values
     pub groups: BTreeMap<String, Vec<String>>,
-    /// Выбранные значения групп: строка — группа зафиксирована, null — runtime
+    /// Chosen group values: a string means the group is fixed, null — runtime
     pub conditions: BTreeMap<String, Option<String>>,
 }
 
 impl Config {
-    /// Валидирует конфигурацию и строит отображение «значение условия → его группа».
+    /// Validates the configuration and builds the "condition value → its group" map.
     ///
-    /// Проверяются инварианты:
-    /// - составы групп в `groups` и `conditions` совпадают;
-    /// - значения условий уникальны между группами;
-    /// - зафиксированное значение принадлежит своей группе.
+    /// Checked invariants:
+    /// - the group sets in `groups` and `conditions` match;
+    /// - condition values are unique across groups;
+    /// - a fixed value belongs to its group.
     pub fn validate(&self) -> Result<std::collections::HashMap<String, String>, String> {
         let mut value_to_group = std::collections::HashMap::new();
 
         for (group, values) in &self.groups {
             if !self.conditions.contains_key(group) {
                 return Err(format!(
-                    "build-conditions: группа '{group}' есть в groups, но отсутствует в conditions"
+                    "build-conditions: group '{group}' is present in groups but missing from conditions"
                 ));
             }
 
             for value in values {
                 if let Some(other) = value_to_group.insert(value.clone(), group.clone()) {
                     return Err(format!(
-                        "build-conditions: значение '{value}' принадлежит сразу двум группам ('{other}' и '{group}'), значения должны быть уникальны между группами"
+                        "build-conditions: value '{value}' belongs to two groups at once ('{other}' and '{group}'), values must be unique across groups"
                     ));
                 }
             }
@@ -70,14 +70,14 @@ impl Config {
         for (group, chosen) in &self.conditions {
             let Some(values) = self.groups.get(group) else {
                 return Err(format!(
-                    "build-conditions: группа '{group}' есть в conditions, но отсутствует в groups"
+                    "build-conditions: group '{group}' is present in conditions but missing from groups"
                 ));
             };
 
             if let Some(chosen) = chosen {
                 if !values.contains(chosen) {
                     return Err(format!(
-                        "build-conditions: значение '{chosen}' не принадлежит группе '{group}'"
+                        "build-conditions: value '{chosen}' does not belong to group '{group}'"
                     ));
                 }
             }
@@ -129,7 +129,7 @@ mod tests {
             .unwrap_err();
 
         assert!(
-            error.contains("группа 'platform' есть в groups, но отсутствует в conditions"),
+            error.contains("group 'platform' is present in groups but missing from conditions"),
             "unexpected error: {error}"
         );
     }
@@ -141,7 +141,7 @@ mod tests {
             .unwrap_err();
 
         assert!(
-            error.contains("группа 'platform' есть в conditions, но отсутствует в groups"),
+            error.contains("group 'platform' is present in conditions but missing from groups"),
             "unexpected error: {error}"
         );
     }
@@ -158,7 +158,7 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            error.contains("значение 'desktop' принадлежит сразу двум группам"),
+            error.contains("value 'desktop' belongs to two groups at once"),
             "unexpected error: {error}"
         );
     }
@@ -175,7 +175,7 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            error.contains("значение 'tablet' не принадлежит группе 'platform'"),
+            error.contains("value 'tablet' does not belong to group 'platform'"),
             "unexpected error: {error}"
         );
     }

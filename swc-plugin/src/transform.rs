@@ -27,26 +27,26 @@ enum Helper {
     Is,
 }
 
-/// Статус значения условия относительно конфига
+/// Status of a condition value relative to the config
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum ConditionState {
-    /// Значение совпало с зафиксированным значением своей группы
+    /// The value matches the fixed value of its group
     ActiveFixed,
-    /// Группа зафиксирована другим значением — условие заведомо неактивно
+    /// The group is fixed to another value — the condition is known inactive
     InactiveFixed,
-    /// Группа не зафиксирована (null) — активность известна только в runtime
+    /// The group is not fixed (null) — activity is known only at runtime
     Runtime,
 }
 
-/// Результат статической оценки вызова isBuildConditions
+/// Result of statically evaluating an isBuildConditions call
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum IsEval {
     Known(bool),
-    /// Есть условия из незафиксированных групп — вызов остаётся в runtime
+    /// Some conditions come from non-fixed groups — the call stays in runtime
     Runtime,
 }
 
-/// Локальные имена хелперов пакета, доступные в скоупе
+/// Local names of the package helpers available in scope
 #[derive(Debug, Default)]
 struct Scope {
     switch_local: Option<Atom>,
@@ -56,17 +56,17 @@ struct Scope {
 
 #[derive(Debug)]
 pub struct TransformVisitor {
-    /// Значение условия → имя его группы
+    /// Condition value → its group name
     value_to_group: HashMap<String, String>,
-    /// Группа → зафиксированное значение (None — группа переключается в runtime)
+    /// Group → fixed value (None — the group is switched at runtime)
     conditions: BTreeMap<String, Option<String>>,
 
     scopes: Vec<Scope>,
     is_es_module: bool,
 
-    /// Была ли выполнена хоть одна трансформация в модуле
+    /// Whether at least one transformation was performed in the module
     did_transform: bool,
-    /// Идентификаторы из удалённых (мёртвых) веток — кандидаты на удаление импортов
+    /// Identifiers from removed (dead) branches — import removal candidates
     discarded_idents: HashSet<Atom>,
 }
 
@@ -109,8 +109,8 @@ impl TransformVisitor {
             .any(|scope| scope.namespace_local.as_ref() == Some(sym))
     }
 
-    /// Определяет, является ли callee вызовом одного из хелперов пакета.
-    /// Поддержаны прямой идентификатор, `ns.helper` и `(0, ns.helper)`.
+    /// Determines whether the callee is a call to one of the package helpers.
+    /// Supports a direct identifier, `ns.helper` and `(0, ns.helper)`.
     fn resolve_helper(&self, callee: &Expr) -> Option<Helper> {
         if let Expr::Paren(paren) = callee {
             if let Some(seq) = paren.expr.as_seq() {
@@ -141,7 +141,7 @@ impl TransformVisitor {
         }
     }
 
-    /// Callee вызова, если это вызов isBuildConditions
+    /// Callee of the call, if it is an isBuildConditions call
     fn as_is_call<'a>(&self, expr: &'a Expr) -> Option<&'a CallExpr> {
         let Expr::Call(call) = expr else {
             return None;
@@ -153,7 +153,7 @@ impl TransformVisitor {
         matches!(self.resolve_helper(callee), Some(Helper::Is)).then_some(call)
     }
 
-    /// Регистрирует хелпер по имени экспорта из пакета
+    /// Registers a helper by its export name from the package
     fn register_export_name(&mut self, export_name: &str, local: &Atom) {
         match export_name {
             SWITCH_HELPER => self.current_scope().switch_local = Some(local.clone()),
@@ -182,7 +182,7 @@ impl TransformVisitor {
         })
     }
 
-    /// Статус значения условия. None — значение не найдено ни в одной группе
+    /// Status of a condition value. None — the value is not found in any group
     fn resolve_condition(&self, value: &str) -> Option<ConditionState> {
         let group = self.value_to_group.get(value)?;
 
@@ -193,16 +193,16 @@ impl TransformVisitor {
         })
     }
 
-    /// Запоминает идентификаторы выброшенного узла — после обхода модуля
-    /// их импорты будут удалены, если не осталось других использований
+    /// Remembers the identifiers of a discarded node — after the module
+    /// traversal their imports are removed if no other usages remain
     fn discard<N: VisitWith<IdentCollector>>(&mut self, node: &N) {
         let mut collector = IdentCollector::default();
         node.visit_with(&mut collector);
         self.discarded_idents.extend(collector.idents);
     }
 
-    /// Извлекает значения условий из аргумента isBuildConditions.
-    /// Err(span) — аргумент не строковый литерал и не массив строковых литералов
+    /// Extracts condition values from an isBuildConditions argument.
+    /// Err(span) — the argument is neither a string literal nor an array of them
     fn extract_is_values(call: &CallExpr) -> Result<Vec<&str>, swc_core::common::Span> {
         let Some(arg) = call.args.first() else {
             return Err(call.span);
@@ -242,16 +242,16 @@ impl TransformVisitor {
         Ok(values)
     }
 
-    /// Статическая оценка значений isBuildConditions.
-    /// Err — среди значений есть неизвестное (нет ни в одной группе конфига)
+    /// Static evaluation of isBuildConditions values.
+    /// Err — one of the values is unknown (absent from every group of the config)
     fn eval_is_values(&self, values: &[&str]) -> Result<IsEval, String> {
         let mut has_runtime = false;
 
         for &value in values {
             match self.resolve_condition(value) {
                 None => return Err(value.to_string()),
-                // Условие из зафиксированной группы не совпало — весь вызов
-                // статически false, даже если остальные условия runtime
+                // A condition from a fixed group did not match — the whole
+                // call is statically false, even if other conditions are runtime
                 Some(ConditionState::InactiveFixed) => return Ok(IsEval::Known(false)),
                 Some(ConditionState::Runtime) => has_runtime = true,
                 Some(ConditionState::ActiveFixed) => {}
@@ -277,14 +277,14 @@ impl TransformVisitor {
             handler.span_err(
                 span,
                 &format!(
-                    "build-conditions: значение условия '{value}' не найдено ни в одной группе конфига (группы: {groups})"
+                    "build-conditions: condition value '{value}' is not found in any group of the config (groups: {groups})"
                 ),
             )
         });
     }
 
-    /// Трансформация `isBuildConditions(условие | [условия])`. Возвращает
-    /// булев литерал или `None`, если вызов должен остаться в runtime
+    /// Transformation of `isBuildConditions(condition | [conditions])`. Returns
+    /// a boolean literal or `None` if the call must stay in runtime
     fn transform_is(&mut self, call: &CallExpr) -> Option<Expr> {
         let values = match Self::extract_is_values(call) {
             Ok(values) => values,
@@ -292,7 +292,7 @@ impl TransformVisitor {
                 HANDLER.with(|handler| {
                     handler.span_err(
                         span,
-                        "build-conditions: isBuildConditions принимает только строковый литерал или массив строковых литералов; для динамических проверок используйте getBuildConditions",
+                        "build-conditions: isBuildConditions accepts only a string literal or an array of string literals; use getBuildConditions for dynamic checks",
                     )
                 });
 
@@ -318,7 +318,7 @@ impl TransformVisitor {
         })))
     }
 
-    /// Ключ свойства карты условий: `key: value` или shorthand `{ key }`
+    /// Key of a condition map property: `key: value` or shorthand `{ key }`
     fn prop_key(prop: &PropOrSpread) -> Option<Atom> {
         let PropOrSpread::Prop(prop) = prop else {
             return None;
@@ -335,8 +335,8 @@ impl TransformVisitor {
         }
     }
 
-    /// Трансформация `switchBuildCondition(map)`. Возвращает выражение-замену
-    /// или `None`, если вызов должен остаться в runtime
+    /// Transformation of `switchBuildCondition(map)`. Returns the replacement
+    /// expression or `None` if the call must stay in runtime
     fn transform_switch(&mut self, call: &mut CallExpr) -> Option<Expr> {
         let call_span = call.span;
 
@@ -351,7 +351,7 @@ impl TransformVisitor {
             HANDLER.with(|handler| {
                 handler.span_err(
                     arg_span,
-                    "build-conditions: switchBuildCondition принимает только объектный литерал с ветками условий",
+                    "build-conditions: switchBuildCondition accepts only an object literal with condition branches",
                 )
             });
 
@@ -367,7 +367,7 @@ impl TransformVisitor {
                     HANDLER.with(|handler| {
                         handler.span_err(
                             prop.span(),
-                            "build-conditions: switchBuildCondition поддерживает только свойства вида `условие: значение`",
+                            "build-conditions: switchBuildCondition supports only properties of the form `condition: value`",
                         )
                     });
 
@@ -376,8 +376,8 @@ impl TransformVisitor {
             }
         }
 
-        // Разрешаем группу каждой ветки; ключи (кроме default) обязаны
-        // принадлежать одной группе — как и в типах (SingleGroup)
+        // Resolve the group of every branch; the keys (except default) must
+        // belong to a single group — same as in the types (SingleGroup)
         let mut map_group: Option<&String> = None;
 
         for key in &keys {
@@ -399,7 +399,7 @@ impl TransformVisitor {
                         handler.span_err(
                             call_span,
                             &format!(
-                                "build-conditions: ветки switchBuildCondition из разных групп условий ('{existing}' и '{group}')"
+                                "build-conditions: switchBuildCondition branches belong to different condition groups ('{existing}' and '{group}')"
                             ),
                         )
                     });
@@ -409,7 +409,7 @@ impl TransformVisitor {
             }
         }
 
-        // Группа карты не зафиксирована — вызов остаётся в runtime
+        // The map's group is not fixed — the call stays in runtime
         if let Some(group) = map_group {
             if self.conditions[group].is_none() {
                 return None;
@@ -428,16 +428,16 @@ impl TransformVisitor {
             HANDLER.with(|handler| {
                 handler.span_err(
                     call_span,
-                    "build-conditions: ни одна ветка switchBuildCondition не совпала с зафиксированными условиями и нет ветки default",
+                    "build-conditions: no switchBuildCondition branch matches the fixed conditions and there is no default branch",
                 )
             });
 
             return None;
         };
 
-        // Значение победителя забираем по владению (вызов целиком будет
-        // заменён им), значения мёртвых веток не клонируем — только собираем
-        // их идентификаторы для чистки импортов
+        // The winner's value is taken by ownership (the whole call will be
+        // replaced by it); dead-branch values are not cloned — only their
+        // identifiers are collected for import cleanup
         let mut winner: Option<Expr> = None;
 
         for (index, prop) in object.props.iter_mut().enumerate() {
@@ -469,9 +469,10 @@ impl TransformVisitor {
         winner
     }
 
-    /// Статическая оценка условия if-стейтмента: прямой вызов isBuildConditions
-    /// или его отрицание (в т.ч. `!!`). Ошибки здесь не эмитятся — если оценка
-    /// не удалась, вызов пройдёт обычный путь трансформации выражений
+    /// Static evaluation of an if-statement test: a direct isBuildConditions
+    /// call or its negation (incl. `!!`). No errors are emitted here — when
+    /// the evaluation fails, the call goes through the regular expression
+    /// transformation path
     fn try_eval_if_test(&self, test: &Expr) -> Option<bool> {
         if let Expr::Unary(unary) = test {
             if unary.op == UnaryOp::Bang {
@@ -490,8 +491,8 @@ impl TransformVisitor {
         }
     }
 
-    /// Удаляет ставшие неиспользуемыми импорты: хелперы пакета без оставшихся
-    /// вызовов и идентификаторы из мёртвых веток
+    /// Removes imports that became unused: package helpers with no remaining
+    /// calls and identifiers from dead branches
     fn cleanup_imports(&mut self, module: &mut Module) {
         let mut usage = IdentCollector::default();
 
@@ -512,7 +513,7 @@ impl TransformVisitor {
             };
 
             if import.specifiers.is_empty() {
-                // Side-effect импорт (`import './styles.css'`) не трогаем
+                // Side-effect imports (`import './styles.css'`) are kept as-is
                 return true;
             }
 
@@ -530,8 +531,9 @@ impl TransformVisitor {
                 }
 
                 if is_module_import {
-                    // Из импорта пакета удаляем только хелперы трансформации и
-                    // namespace: рантайм-хелперы (setBuildConditions и т.п.) не трогаем
+                    // From the package import, only the transform helpers and
+                    // the namespace are removed: runtime helpers
+                    // (setBuildConditions etc.) are kept
                     match specifier {
                         ImportSpecifier::Named(named) => {
                             let export_name = match &named.imported {
@@ -546,7 +548,7 @@ impl TransformVisitor {
                         ImportSpecifier::Default(_) => true,
                     }
                 } else {
-                    // Из прочих импортов удаляем только значения из мёртвых веток
+                    // From other imports, only values from dead branches are removed
                     !discarded.contains(&local.sym)
                 }
             });
@@ -562,12 +564,13 @@ impl VisitMut for TransformVisitor {
     fn visit_mut_program(&mut self, node: &mut Program) {
         self.is_es_module = node.is_module();
 
-        // Быстрый выход: в Module-программах ссылка на пакет — import или
-        // top-level `require` — всегда на верхнем уровне, без неё обход
-        // дерева не нужен. Экзотика вроде require пакета только внутри
-        // функций Module-программы не трансформируется, но остаётся рабочей:
-        // у хелперов есть runtime-реализация. Script (CommonJS) обходим
-        // всегда — там require может встретиться в любом скоупе.
+        // Fast path: in Module programs a reference to the package — an import
+        // or a top-level `require` — is always at the top level; without one
+        // the tree traversal is unnecessary. Exotic cases like requiring the
+        // package only inside functions of a Module program are not
+        // transformed but keep working: the helpers have runtime
+        // implementations. Script (CommonJS) programs are always traversed —
+        // there require can appear in any scope.
         if let Program::Module(module) = &*node {
             if !module_references_package(module) {
                 return;
@@ -604,7 +607,7 @@ impl VisitMut for TransformVisitor {
                             HANDLER.with(|handler| {
                                 handler.span_err(
                                     node.span,
-                                    "build-conditions: строковые литералы в импортах не поддерживаются",
+                                    "build-conditions: string literals in imports are not supported",
                                 )
                             });
 
@@ -669,15 +672,16 @@ impl VisitMut for TransformVisitor {
             return;
         }
 
-        // В CommonJS require может встречаться внутри функций — заводим скоуп
+        // In CommonJS require can appear inside functions — open a scope
         self.scopes.push(Scope::default());
         node.visit_mut_children_with(self);
         self.scopes.pop();
     }
 
     fn visit_mut_stmt(&mut self, stmt: &mut Stmt) {
-        // Вырезание мёртвых веток `if (isBuildConditions(...))` до обхода детей:
-        // после замены вызова на литерал вызов уже не отличить от написанного руками
+        // Dead `if (isBuildConditions(...))` branches are removed before
+        // visiting children: once the call is replaced by a literal, it is
+        // indistinguishable from a hand-written one
         if let Stmt::If(if_stmt) = stmt {
             if let Some(test_result) = self.try_eval_if_test(&if_stmt.test) {
                 let dropped: Option<&Stmt> = if test_result {
@@ -686,8 +690,9 @@ impl VisitMut for TransformVisitor {
                     Some(&if_stmt.cons)
                 };
 
-                // `var` из удалённой ветки всплывает на уровень функции —
-                // такую ветку не вырезаем, `if (false)` доедят бандлер и минификатор
+                // `var` from a removed branch hoists to the function level —
+                // such a branch is kept; the bundler and the minifier will
+                // finish off the `if (false)`
                 let hoists_var = dropped.is_some_and(has_hoisted_var);
 
                 if !hoists_var {
@@ -695,7 +700,7 @@ impl VisitMut for TransformVisitor {
                         self.discard(dropped);
                     }
 
-                    // Ветки забираем по владению — if целиком будет перезаписан
+                    // Branches are taken by ownership — the whole if is rewritten
                     let taken: Option<Stmt> = if test_result {
                         Some(*if_stmt.cons.take())
                     } else {
@@ -705,11 +710,11 @@ impl VisitMut for TransformVisitor {
                     self.did_transform = true;
 
                     match taken {
-                        // Ветка остаётся блоком — сохраняем скоуп let/const
+                        // The branch stays a block — the let/const scope is preserved
                         Some(taken) => {
                             *stmt = taken;
-                            // Выжившая ветка обходится заново: внутри могут быть
-                            // вложенные вызовы хелперов и else-if цепочки
+                            // The surviving branch is traversed again: it may
+                            // contain nested helper calls and else-if chains
                             self.visit_mut_stmt(stmt);
                         }
                         None => {
@@ -759,8 +764,8 @@ impl VisitMut for TransformVisitor {
     }
 }
 
-/// Есть ли в узле `var`-декларации, всплывающие из блока (без захода
-/// во вложенные функции — у них свой скоуп)
+/// Whether the node contains `var` declarations that hoist out of the block
+/// (nested functions are not descended into — they have their own scope)
 fn has_hoisted_var(stmt: &Stmt) -> bool {
     let mut finder = HoistedVarFinder::default();
     stmt.visit_with(&mut finder);
@@ -788,8 +793,8 @@ impl Visit for HoistedVarFinder {
     fn visit_arrow_expr(&mut self, _: &swc_core::ecma::ast::ArrowExpr) {}
 }
 
-/// Собирает идентификаторы поддерева: мёртвых веток при трансформации
-/// и всего модуля (вне импортов) при чистке импортов
+/// Collects the identifiers of a subtree: of dead branches during the
+/// transformation and of the whole module (outside imports) during import cleanup
 #[derive(Default)]
 struct IdentCollector {
     idents: HashSet<Atom>,
@@ -803,8 +808,9 @@ impl Visit for IdentCollector {
     }
 }
 
-/// Есть ли на верхнем уровне модуля ссылка на пакет: import с его specifier
-/// или var-декларация с `require` пакета в инициализаторе
+/// Whether the module references the package at the top level: an import with
+/// its specifier or a var declaration with a `require` of the package in the
+/// initializer
 fn module_references_package(module: &Module) -> bool {
     module.body.iter().any(|item| match item {
         ModuleItem::ModuleDecl(ModuleDecl::Import(import)) => {

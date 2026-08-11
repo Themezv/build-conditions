@@ -1,7 +1,7 @@
 {
     "name": "build-conditions",
     "version": "0.1.0",
-    "description": "Разделение кода по произвольным условиям на этапе сборки",
+    "description": "Build-time code splitting by arbitrary conditions: runtime helpers plus an SWC plugin that inlines branches and removes dead code",
     "license": "MIT",
     "author": "Artem Zverev <themezv@gmail.com>",
     "repository": {

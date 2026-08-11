@@ -3,7 +3,7 @@ import type { Preview } from 'storybook-react-rsbuild';
 import { createBuildConditionsDecorator, createBuildConditionsGlobalTypes } from '../../src/addon';
 
 /**
- * Группы условий для демо объявлены в src/testGroups.d.ts
+ * Condition groups for the demo are declared in src/testGroups.d.ts
  * (platform: desktop | mobile, runtime: server | client)
  */
 const conditionsConfig = {

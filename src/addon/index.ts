@@ -2,21 +2,21 @@ import type { BuildConditionGroups } from '../index';
 import type { GroupName, PartialBuildConditions } from '../types';
 import { setBuildConditions } from '../storage';
 
-/** Префикс ключей в globals, чтобы не конфликтовать с другими аддонами */
+/** Prefix for keys in globals, to avoid clashes with other addons */
 export const BUILD_CONDITIONS_GLOBAL_PREFIX = 'buildConditions_';
 
 export interface BuildConditionsToolbarGroup<G extends GroupName = GroupName> {
-    /** Значения группы, доступные для переключения в toolbar */
+    /** Group values available for switching in the toolbar */
     values: readonly BuildConditionGroups[G][];
-    /** Значение группы по умолчанию */
+    /** Default value of the group */
     defaultValue: BuildConditionGroups[G];
-    /** Заголовок пункта в toolbar (по умолчанию — имя группы) */
+    /** Title of the toolbar item (defaults to the group name) */
     title?: string;
-    /** Имя иконки Storybook для пункта toolbar */
+    /** Storybook icon name for the toolbar item */
     icon?: string;
 }
 
-/** Конфигурация аддона: какие группы условий доступны для переключения в toolbar */
+/** Addon configuration: which condition groups are switchable in the toolbar */
 export type BuildConditionsAddonConfig = {
     [G in GroupName]?: BuildConditionsToolbarGroup<G>;
 };
@@ -38,17 +38,17 @@ interface GlobalType {
 }
 
 /**
- * Пока группы условий не объявлены, mapped-тип конфига сворачивается в `{}` —
- * итерируемся по записям с явным типом группы.
+ * While no condition groups are declared, the mapped config type collapses
+ * to `{}` — iterate over the entries with an explicit group type.
  */
 function configEntries(config: BuildConditionsAddonConfig): [string, BuildConditionsToolbarGroup | undefined][] {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Object.entries теряет типы mapped-типа
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Object.entries loses mapped-type keys
     return Object.entries(config) as [string, BuildConditionsToolbarGroup | undefined][];
 }
 
 /**
- * Создаёт `globalTypes` для preview-конфига Storybook: по toolbar-элементу
- * на каждую группу условий из конфигурации.
+ * Creates `globalTypes` for the Storybook preview config: one toolbar item
+ * per condition group from the configuration.
  *
  * ```typescript
  * // .config/storybook/preview.ts
@@ -85,9 +85,9 @@ interface StoryContextLike {
 }
 
 /**
- * Создаёт глобальный декоратор для preview-конфига Storybook: читает выбранные
- * в toolbar значения из `context.globals` и устанавливает их через
- * `setBuildConditions` перед рендером story.
+ * Creates a global decorator for the Storybook preview config: reads the
+ * toolbar-selected values from `context.globals` and applies them via
+ * `setBuildConditions` before rendering the story.
  *
  * ```typescript
  * // .config/storybook/preview.ts
@@ -106,7 +106,7 @@ export function createBuildConditionsDecorator(config: BuildConditionsAddonConfi
             conditions[group] = context.globals?.[BUILD_CONDITIONS_GLOBAL_PREFIX + group] ?? groupConfig.defaultValue;
         }
 
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ключи собраны из BuildConditionsAddonConfig
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- keys come from BuildConditionsAddonConfig
         setBuildConditions(conditions as PartialBuildConditions);
 
         return story();

@@ -1,5 +1,6 @@
-// Модуль без ссылки на пакет: обход дерева пропускается (ранний выход),
-// код остаётся нетронутым — включая одноимённые с хелперами локальные функции
+// Module without a reference to the package: the tree traversal is skipped
+// (early exit) and the code stays untouched — including local functions
+// that share names with the helpers
 import { other } from './other';
 function isBuildConditions(value) {
     return other(value);

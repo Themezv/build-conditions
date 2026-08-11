@@ -6,7 +6,7 @@ import { setBuildConditions } from '../storage';
 export type BuildConditionsDecorator = (story: () => ReactNode) => ReactElement;
 
 /**
- * Storybook/тестовый декоратор: устанавливает условия сборки перед рендером story.
+ * Storybook/test decorator: sets the build conditions before rendering a story.
  *
  * ```typescript
  * import { withBuildConditions } from 'build-conditions/testing';

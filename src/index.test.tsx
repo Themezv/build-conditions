@@ -9,8 +9,8 @@ beforeEach(() => {
 });
 
 describe('switchBuildCondition', () => {
-    describe('функции', () => {
-        it('выбирает функцию по условию', () => {
+    describe('functions', () => {
+        it('picks the function matching the condition', () => {
             const fn = switchBuildCondition({
                 desktop: (x: number) => x * 2,
                 mobile: (x: number) => x * 3,
@@ -23,7 +23,7 @@ describe('switchBuildCondition', () => {
             expect(fn(5)).toBe(15);
         });
 
-        it('динамически переключается без пересоздания', () => {
+        it('switches dynamically without recreation', () => {
             const callCount = { desktop: 0, mobile: 0 };
 
             const fn = switchBuildCondition({
@@ -49,7 +49,7 @@ describe('switchBuildCondition', () => {
             expect(callCount).toEqual({ desktop: 2, mobile: 1 });
         });
 
-        it('пробрасывает this', () => {
+        it('forwards this', () => {
             const fn = switchBuildCondition({
                 desktop: function (this: { value: number }) {
                     return this.value;
@@ -68,7 +68,7 @@ describe('switchBuildCondition', () => {
     });
 
     describe('React function component', () => {
-        it('рендерит компонент по условию', () => {
+        it('renders the component matching the condition', () => {
             const Desktop = () => <div data-testid="result">desktop</div>;
             const Mobile = () => <div data-testid="result">mobile</div>;
 
@@ -84,7 +84,7 @@ describe('switchBuildCondition', () => {
             expect(screen.getByTestId('result')).toHaveTextContent('mobile');
         });
 
-        it('передаёт пропсы', () => {
+        it('passes props through', () => {
             const Desktop = ({ name }: { name: string }) => <span>{name}-desktop</span>;
             const Mobile = ({ name }: { name: string }) => <span>{name}-mobile</span>;
 
@@ -97,7 +97,7 @@ describe('switchBuildCondition', () => {
     });
 
     describe('React.memo()', () => {
-        it('рендерит memo-компоненты', () => {
+        it('renders memo components', () => {
             const Desktop = memo(() => <div data-testid="memo">memo-desktop</div>);
             const Mobile = memo(() => <div data-testid="memo">memo-mobile</div>);
 
@@ -113,7 +113,7 @@ describe('switchBuildCondition', () => {
             expect(screen.getByTestId('memo')).toHaveTextContent('memo-mobile');
         });
 
-        it('мемоизация работает при повторном рендере', () => {
+        it('memoization survives a re-render', () => {
             let renderCount = 0;
             const Inner = memo(({ value }: { value: string }) => {
                 renderCount++;
@@ -133,7 +133,7 @@ describe('switchBuildCondition', () => {
     });
 
     describe('React.forwardRef()', () => {
-        it('рендерит и пробрасывает ref', () => {
+        it('renders and forwards the ref', () => {
             const Desktop = forwardRef<HTMLDivElement, { text: string }>(({ text }, ref) => (
                 <div ref={ref} data-testid="fref">
                     {text}-desktop
@@ -157,7 +157,7 @@ describe('switchBuildCondition', () => {
     });
 
     describe('memo(forwardRef())', () => {
-        it('рендерит и пробрасывает ref', () => {
+        it('renders and forwards the ref', () => {
             const Desktop = memo(
                 forwardRef<HTMLButtonElement, { label: string }>(({ label }, ref) => (
                     <button ref={ref} data-testid="mfr">
@@ -184,8 +184,8 @@ describe('switchBuildCondition', () => {
         });
     });
 
-    describe('объекты (CSS Modules)', () => {
-        it('проксирует доступ к свойствам', () => {
+    describe('objects (CSS Modules)', () => {
+        it('proxies property access', () => {
             const desktopStyles = { root: 'root_desktop', title: 'title_desktop' };
             const mobileStyles = { root: 'root_mobile', title: 'title_mobile' };
 
@@ -199,7 +199,7 @@ describe('switchBuildCondition', () => {
             expect(styles.root).toBe('root_mobile');
         });
 
-        it('оператор in', () => {
+        it('in operator', () => {
             const styles = switchBuildCondition({
                 desktop: { root: 'a', extra: 'b' },
                 mobile: { root: 'c' },
@@ -227,7 +227,7 @@ describe('switchBuildCondition', () => {
     });
 
     describe('default', () => {
-        it('fallback на default если условие не совпало', () => {
+        it('falls back to default when no condition matches', () => {
             const fn = switchBuildCondition({
                 default: () => 'default-result',
                 server: () => 'server-result',
@@ -240,7 +240,7 @@ describe('switchBuildCondition', () => {
             expect(fn()).toBe('default-result');
         });
 
-        it('прямое условие имеет приоритет над default', () => {
+        it('a direct condition takes priority over default', () => {
             const fn = switchBuildCondition({
                 default: () => 'fallback',
                 desktop: () => 'desk',
@@ -253,15 +253,15 @@ describe('switchBuildCondition', () => {
             expect(fn()).toBe('fallback');
         });
 
-        it('бросает ошибку если нет ни совпадения, ни default', () => {
+        it('throws when there is neither a match nor a default', () => {
             const fn = switchBuildCondition({ desktop: () => 'ok' });
 
             setBuildConditions({ platform: 'mobile' });
-            expect(() => fn()).toThrow('нет значения для текущих условий');
+            expect(() => fn()).toThrow('no value for the current conditions');
         });
     });
 
-    describe('вложенные switchBuildCondition', () => {
+    describe('nested switchBuildCondition', () => {
         const createComponent = () =>
             switchBuildCondition({
                 client: switchBuildCondition({
@@ -280,7 +280,7 @@ describe('switchBuildCondition', () => {
             unmount();
         });
 
-        it('runtime=client, platform=mobile → Empty (default внутреннего)', () => {
+        it('runtime=client, platform=mobile → Empty (inner default)', () => {
             const Component = createComponent();
 
             setBuildConditions({ runtime: 'client', platform: 'mobile' });
@@ -289,7 +289,7 @@ describe('switchBuildCondition', () => {
             unmount();
         });
 
-        it('runtime=server → stub (default внешнего)', () => {
+        it('runtime=server → stub (outer default)', () => {
             const Component = createComponent();
 
             setBuildConditions({ runtime: 'server', platform: 'desktop' });
@@ -298,7 +298,7 @@ describe('switchBuildCondition', () => {
             unmount();
         });
 
-        it('динамическое переключение вложенных условий', () => {
+        it('switches nested conditions dynamically', () => {
             const Component = createComponent();
 
             setBuildConditions({ runtime: 'client', platform: 'desktop' });
@@ -318,8 +318,8 @@ describe('switchBuildCondition', () => {
         });
     });
 
-    describe('типизация: однородность и группы', () => {
-        it('однородные функции — допустимо', () => {
+    describe('typing: homogeneity and groups', () => {
+        it('homogeneous functions — allowed', () => {
             const result = switchBuildCondition({
                 desktop: (x: number) => x * 2,
                 mobile: (x: number) => x * 3,
@@ -328,7 +328,7 @@ describe('switchBuildCondition', () => {
             expect(result(1)).toBe(2);
         });
 
-        it('однородные объекты — допустимо', () => {
+        it('homogeneous objects — allowed', () => {
             const result = switchBuildCondition({
                 desktop: { root: 'a' },
                 mobile: { root: 'b' },
@@ -337,58 +337,58 @@ describe('switchBuildCondition', () => {
             expect(result.root).toBe('a');
         });
 
-        it('смешение функции и объекта — ошибка типизации', () => {
+        it('mixing a function and an object — type error', () => {
             const obj = { root: 'a' };
             const fn = () => 'b';
 
-            // @ts-expect-error — нельзя смешивать функции и объекты
+            // @ts-expect-error — functions and objects cannot be mixed
             switchBuildCondition({ desktop: obj, mobile: fn });
         });
 
-        it('смешение memo и обычной функции — ошибка типизации', () => {
+        it('mixing memo and a plain function — type error', () => {
             const Memo = memo(() => <div>m</div>);
             const Fn = () => <div>f</div>;
 
-            // @ts-expect-error — memo (объект) + function нельзя смешивать
+            // @ts-expect-error — memo (an object) + function cannot be mixed
             switchBuildCondition({ desktop: Memo, mobile: Fn });
         });
 
-        it('смешение групп в одной карте — ошибка типизации', () => {
+        it('mixing groups in one map — type error', () => {
             const Desktop = () => <div>d</div>;
             const Server = () => <div>s</div>;
 
-            // @ts-expect-error — ключи desktop и server из разных групп
+            // @ts-expect-error — keys desktop and server belong to different groups
             switchBuildCondition({ desktop: Desktop, server: Server });
         });
 
-        it('примитивы запрещены', () => {
-            // @ts-expect-error — строки не являются AllowedValue
+        it('primitives are forbidden', () => {
+            // @ts-expect-error — strings are not AllowedValue
             switchBuildCondition({ desktop: 'hello', mobile: 'world' });
         });
     });
 });
 
 describe('isBuildConditions', () => {
-    it('true, если условие активно', () => {
+    it('true when the condition is active', () => {
         setBuildConditions({ platform: 'desktop' });
         expect(isBuildConditions('desktop')).toBe(true);
         expect(isBuildConditions('mobile')).toBe(false);
     });
 
-    it('несколько условий — true только если активны все', () => {
+    it('multiple conditions — true only when all are active', () => {
         setBuildConditions({ platform: 'desktop', runtime: 'client' });
         expect(isBuildConditions(['desktop', 'client'])).toBe(true);
         expect(isBuildConditions(['desktop', 'server'])).toBe(false);
     });
 
-    it('два значения одной группы запрещены типами', () => {
+    it('two values from one group are rejected by the types', () => {
         setBuildConditions({ platform: 'desktop' });
-        // @ts-expect-error — desktop и mobile из одной группы
+        // @ts-expect-error — desktop and mobile belong to the same group
         expect(isBuildConditions(['desktop', 'mobile'])).toBe(false);
     });
 
-    it('бросает ошибку, если условия не установлены', () => {
-        // хранилище пусто — getBuildConditions выбрасывает ошибку
+    it('throws when conditions are not set', () => {
+        // the storage is empty — getBuildConditions throws
         expect(() => isBuildConditions('desktop')).toThrow();
     });
 });

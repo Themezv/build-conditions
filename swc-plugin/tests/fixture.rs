@@ -31,7 +31,7 @@ fn tr(config_json: &str) -> impl Pass {
     )
 }
 
-/// Все группы зафиксированы
+/// All groups are fixed
 #[fixture("tests/fixture/fixed/**/input.js")]
 fn fixtures_fixed(input: PathBuf) {
     let output = input.parent().unwrap().join("output.js");
@@ -45,7 +45,7 @@ fn fixtures_fixed(input: PathBuf) {
     );
 }
 
-/// Группа platform не зафиксирована (null), runtime зафиксирована
+/// The platform group is not fixed (null), runtime is fixed
 #[fixture("tests/fixture/partial/**/input.js")]
 fn fixtures_partial(input: PathBuf) {
     let output = input.parent().unwrap().join("output.js");
@@ -59,7 +59,7 @@ fn fixtures_partial(input: PathBuf) {
     );
 }
 
-/// Ошибки сборки: вызов остаётся нетронутым, HANDLER получает span_err
+/// Build errors: the call stays untouched, HANDLER receives span_err
 #[fixture("tests/fixture/errors/**/input.js")]
 fn fixtures_errors(input: PathBuf) {
     let output = input.parent().unwrap().join("output.js");
@@ -76,10 +76,10 @@ fn fixtures_errors(input: PathBuf) {
     );
 }
 
-/// Невалидный конфиг роняет инициализацию визитора
-/// (сами правила валидации покрыты юнит-тестами `Config::validate` в lib.rs)
+/// An invalid config panics during visitor initialization
+/// (the validation rules themselves are covered by `Config::validate` unit tests in lib.rs)
 #[test]
-#[should_panic(expected = "есть в groups, но отсутствует в conditions")]
+#[should_panic(expected = "is present in groups but missing from conditions")]
 fn invalid_config_panics() {
     let config: Config =
         serde_json::from_str(r#"{ "groups": { "platform": ["desktop", "mobile"] }, "conditions": {} }"#)

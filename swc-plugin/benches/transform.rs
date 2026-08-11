@@ -1,16 +1,16 @@
-//! Перф-замеры трансформации на синтетических модулях: `cargo bench`.
+//! Performance measurements of the transformation on synthetic modules: `cargo bench`.
 //!
-//! Замеряется только сам визитор (нативная сборка); абсолютные числа в
-//! wasm-рантайме будут другими, но относительная динамика — та же.
-//! Сценарии покрывают горячие пути:
-//! - `no_package_reference` — модуль без ссылки на пакет (ранний выход,
-//!   типовой файл сборки);
-//! - `switch_large_branches` — switchBuildCondition с крупными ветками
-//!   (забор победителя по владению вместо клонирования всех веток);
-//! - `nested_known_ifs` — вложенные статически известные if (забор ветки
-//!   по владению вместо глубокого клона);
-//! - `cjs_script_requires` — CommonJS-скрипт (полный обход со скоупами
-//!   на каждый блок).
+//! Only the visitor itself is measured (native build); absolute numbers in
+//! the wasm runtime will differ, but the relative dynamics are the same.
+//! The scenarios cover the hot paths:
+//! - `no_package_reference` — a module without a reference to the package
+//!   (early exit, the typical file in a build);
+//! - `switch_large_branches` — switchBuildCondition with large branches
+//!   (the winner is taken by ownership instead of cloning all branches);
+//! - `nested_known_ifs` — nested statically known ifs (the branch is taken
+//!   by ownership instead of a deep clone);
+//! - `cjs_script_requires` — a CommonJS script (full traversal with a scope
+//!   per block).
 
 use std::fmt::Write as _;
 
@@ -76,7 +76,7 @@ fn bench_case(c: &mut Criterion, name: &str, source: &str, as_script: bool) {
     });
 }
 
-/// Модуль без ссылки на пакет — подавляющее большинство файлов сборки
+/// A module without a reference to the package — the vast majority of files in a build
 fn module_without_package(functions: usize) -> String {
     let mut src = String::from("import { helper } from './helper';\n");
 
@@ -95,7 +95,7 @@ fn module_without_package(functions: usize) -> String {
     src
 }
 
-/// Модуль со switchBuildCondition, у каждой ветки — крупное значение
+/// A module with switchBuildCondition calls, each branch holding a large value
 fn module_with_switches(calls: usize, branch_statements: usize) -> String {
     let mut src =
         String::from("import { switchBuildCondition } from 'build-conditions';\n");
@@ -125,7 +125,7 @@ fn module_with_switches(calls: usize, branch_statements: usize) -> String {
     src
 }
 
-/// Вложенные статически известные if с мёртвыми else-ветками
+/// Nested statically known ifs with dead else branches
 fn module_with_nested_ifs(depth: usize, leaf_statements: usize) -> String {
     let mut src = String::from(
         "import { isBuildConditions } from 'build-conditions';\n\
@@ -149,7 +149,7 @@ fn module_with_nested_ifs(depth: usize, leaf_statements: usize) -> String {
     src
 }
 
-/// CommonJS-скрипт с top-level require и вызовами хелпера в функциях
+/// A CommonJS script with a top-level require and helper calls inside functions
 fn script_with_requires(functions: usize) -> String {
     let mut src = String::from(
         "const { isBuildConditions } = require('build-conditions');\n",

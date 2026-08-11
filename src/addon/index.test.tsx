@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 describe('createBuildConditionsGlobalTypes', () => {
-    it('создаёт toolbar-элемент на каждую группу', () => {
+    it('creates a toolbar item per group', () => {
         const globalTypes = createBuildConditionsGlobalTypes(addonConfig);
 
         expect(globalTypes).toEqual({
@@ -51,7 +51,7 @@ describe('createBuildConditionsGlobalTypes', () => {
 });
 
 describe('createBuildConditionsDecorator', () => {
-    it('устанавливает выбранные в toolbar условия перед рендером story', () => {
+    it('applies the toolbar-selected conditions before rendering the story', () => {
         const decorator = createBuildConditionsDecorator(addonConfig);
 
         const result = decorator(() => 'rendered', {
@@ -62,7 +62,7 @@ describe('createBuildConditionsDecorator', () => {
         expect(getBuildConditions()).toEqual({ platform: 'mobile', runtime: 'client' });
     });
 
-    it('использует значения по умолчанию, когда globals пусты', () => {
+    it('falls back to default values when globals are empty', () => {
         const decorator = createBuildConditionsDecorator(addonConfig);
 
         decorator(() => null, {});

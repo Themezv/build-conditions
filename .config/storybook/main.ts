@@ -2,8 +2,8 @@ import { mergeRsbuildConfig } from '@rsbuild/core';
 import type { StorybookConfig } from 'storybook-react-rsbuild';
 
 /**
- * Демо-стенд пакета: vanilla storybook-react-rsbuild.
- * JSX runtime включается напрямую через swc — без @rsbuild/plugin-react.
+ * Package demo stand: vanilla storybook-react-rsbuild.
+ * The JSX runtime is enabled directly through swc — without @rsbuild/plugin-react.
  */
 const config: StorybookConfig = {
     stories: ['../../src/**/*.story.tsx'],

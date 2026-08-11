@@ -1,9 +1,9 @@
 /**
- * Тестовые группы условий для юнит-тестов пакета.
+ * Test condition groups for the package's own unit tests.
  *
- * Declaration merging действует на весь пакет при локальном тайпчеке,
- * но не попадает в программы потребителей — файл не импортируется
- * ни из одного entrypoint'а.
+ * The declaration merging applies to the whole package during the local
+ * typecheck but never reaches consumer programs — the file is not imported
+ * from any entrypoint.
  */
 import './index';
 

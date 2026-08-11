@@ -2,16 +2,16 @@ import type { Condition, UniqueConditionValuesGuard, UniqueGroups } from './type
 import { getBuildConditions } from './storage';
 
 /**
- * Проверяет, активны ли указанные условия. Принимает либо одно условие строкой,
- * либо массив условий — тогда возвращает `true`, только когда все они активны
- * одновременно.
+ * Checks whether the given conditions are active. Accepts either a single
+ * condition string or an array of conditions — in the latter case returns
+ * `true` only when all of them are active at once.
  *
- * Имя группы не указывается — оно однозначно восстанавливается по значению,
- * т.к. значения условий уникальны между группами.
+ * The group name is not specified — it is unambiguously derived from the
+ * value, because condition values are unique across groups.
  *
- * Без SWC-плагина работает в runtime через `getBuildConditions()`; при
- * неустановленных условиях бросает ошибку. SWC-плагин при сборке с
- * зафиксированными условиями сворачивает вызов в `true` / `false`.
+ * Without the SWC plugin the check runs at runtime via `getBuildConditions()`
+ * and throws when conditions are not set. When building with fixed conditions,
+ * the SWC plugin folds the call into `true` / `false`.
  */
 export function isBuildConditions(condition: Condition & UniqueConditionValuesGuard): boolean;
 export function isBuildConditions<const L extends readonly Condition[]>(
